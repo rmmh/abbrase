@@ -1,20 +1,20 @@
 digest = open('data/2gram_digest.txt')
 
-common = ['']
-for n, line in enumerate(digest, 1):
-    line = line.strip()
-    if line == 'GRAPH:':
-        break
-    common.append(line)
+n_words = int(digest.readline())
 
-for line in digest:
-    a, bs = line.strip().split(' ', 1)
-    print common[int(a)]
-    num = 0
-    following = []
-    for b in bs.split():
-        num += int(b)
-        following.append(common[num])
-    print ' '.join(sorted(following))
+common = ['']
+for _ in xrange(n_words):
+    common.append(digest.readline().strip())
 
 print common[:500]
+
+for a in xrange(n_words):
+    line = digest.readline()
+    num = 0
+    if a > 10000:
+        following = []
+        for b in line.split():
+            num += int(b)
+            following.append(common[num])
+        print common[int(a)]
+        print ' '.join(sorted(following))
