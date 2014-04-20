@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     size_t bufsize = 256;
     char* buf = malloc(bufsize);
     char last[512];
-    long total = 0;
+    long long total = 0;
     int count_field;
     if (argc != 2)
         errx(1, "usage: %s <count_field>", argv[0]);
@@ -32,14 +32,14 @@ int main(int argc, char *argv[]) {
 
         if (strcmp(buf, last)) {
             if (total)
-                printf("%s\t%ld\n", last, total);
+                printf("%s\t%lld\n", last, total);
             strncpy(last, buf, sizeof(last)-1);
             total = 0;
         }
 
-        total += atoi(tab);
+        total += atoll(tab);
     }
 
     if (total)
-        printf("%s\t%ld\n", last, total);
+        printf("%s\t%lld\n", last, total);
 }

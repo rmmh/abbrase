@@ -1,4 +1,4 @@
-all: data/digest
+all: data/2gram_digest.txt
 
 CORPUS_EXEMPLAR=googlebooks-eng-1M-2gram-20090715-99.csv.zip
 
@@ -16,4 +16,12 @@ data/1gram.csv.gz: | data/${CORPUS_EXEMPLAR} groupby
 data/2gram.csv.gz: | data/${CORPUS_EXEMPLAR} groupby
 	zcat data/googlebooks-eng-1M-2gram-*.csv.zip | pv | ./groupby 3 | LC_ALL=c sort | ./groupby 2 | gzip -9 > $@
 
-data/digest: data/1gram.csv.gz data/2gram.csv.gz
+# extract the 100,000 most common words
+data/1gram_common.csv: data/1gram.csv.gz
+	zcat $< | sort -rgk2 | head -n 100000 > $@
+
+data/prefixes.txt: data/1gram_common.csv
+	cat $< | sed 's/^\(...\).*\t/\1\t/' | grep '^[a-z]\{3\}' | ./groupby 2 | sort -rgk2 | head -n 2048 > $@
+
+data/2gram_digest.txt: data/prefixes.txt data/2gram.csv.gz
+	zcat data/2gram.csv.gz | pypy digest.py
