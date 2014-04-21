@@ -70,15 +70,16 @@ class WordGraph(object):
             last_word = word
 
         #print mismatch
-        return ''.join(out).title(), ' '.join(out_words)
+        return ''.join(out), ' '.join(out_words)
 
 
 graph = WordGraph('data/2gram_digest.txt')
 
+count = 32
 length = 5
-print 'Generating passwords with %d bits of entropy' % (length * 10)
+print 'Generating %d passwords with %d bits of entropy' % (count, length * 10)
 pass_len = length * 3
-print 'Password'.ljust(pass_len), 'Phrase'
-print '-' * pass_len, '-' * (4 * length)
-for _ in xrange(16):
-    print '%s %s' % graph.gen_passphrase(5)
+print 'Password'.ljust(pass_len), '  ', 'Phrase'
+print '-' * pass_len, '  ', '-' * (4 * length)
+for _ in xrange(count):
+    print '%s    %s' % graph.gen_passphrase(length)
