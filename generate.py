@@ -1,5 +1,7 @@
 import struct
 
+import digest
+
 
 def gen_cryptorand_int():
     return struct.unpack('>I', open('/dev/urandom', 'rb').read(4))[0]
@@ -8,19 +10,19 @@ def gen_cryptorand_int():
 class WordGraph(object):
 
     def __init__(self, fname):
-        digest = open(fname)
-        n_words = int(digest.readline())
+        compressed_graph = open(fname)
+        n_words = int(compressed_graph.readline())
         self.wordlist = ['']  # ['', 'and', 'the', ...]
         self.prefixes = {}  # {'and': [1, ...], ...}
         for n in xrange(1, n_words, 1):
-            word = digest.readline().strip()
+            word = compressed_graph.readline().strip()
             self.wordlist.append(word)
             self.prefixes.setdefault(word[:3], []).append(n)
 
         self.followers = []
 
         for a in xrange(n_words):
-            line = digest.readline()
+            line = compressed_graph.readline()
             self.followers.append(line)
 
     def get_followers(self, node_number):
@@ -29,14 +31,7 @@ class WordGraph(object):
 
         if isinstance(outgoing, str):
             # line hasn't been decoded
-            # 'possible next words' (directed edges) are encoded as difference
-            # from the last edge, starting at 0
-            following = set()
-            num = 0
-            for b in outgoing.split():
-                num += int(b)
-                following.add(num)
-            outgoing = following
+            outgoing = set(digest.decode(outgoing))
             self.followers[node_number] = outgoing
         return outgoing
 
@@ -86,6 +81,13 @@ class WordGraph(object):
 
 
 graph = WordGraph('data/2gram_digest.txt')
+
+differential_len = 0
+for word_n in xrange(1, 4000):
+    followers = sorted(graph.get_followers(word_n))
+    differential_len += sum(len(s) for s in digest.encode(list(followers)))
+print 'differential:', differential_len
+
 
 count = 32
 length = 5
