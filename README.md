@@ -2,7 +2,7 @@
 
 Abbrase is an abbreviated passphrase generator.
 
-Creating secure passwords is easy. Remembering them is hard. [Pwgen](http://sourceforge.net/projects/pwgen/) makes them memorable though prounouncability. XKCD [suggests](http://xkcd.com/936/) using a series of random common words, but the "bag of random words" technique has difficulty scaling to higher entropy levels.
+Creating secure passwords is easy. Remembering them is hard. [Pwgen](http://sourceforge.net/projects/pwgen/) makes them memorable though prounouncability. XKCD [suggests](http://xkcd.com/936/) using a series of random common words, but memorizing series of unrelated words can be difficult, and typing long phrases can be tedious.
 
 Abbrase is an experiment with generating probable phrases using markov chains, and abbreviating each word to the first few letters. This strikes a balance between excessive password length and excessive mnemonic length.
 
