@@ -73,7 +73,7 @@ def decode(enc):
     for num in enc.split():
         num = int(num)
         dec.append(last_num + num)
-        last_num = num
+        last_num += num
     return dec
 
 
