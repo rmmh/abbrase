@@ -21,7 +21,7 @@ data/1gram_common.csv: data/1gram.csv.gz
 	zcat $< | sort -rgk2 | head -n 100000 > $@
 
 data/prefixes.txt: data/1gram_common.csv
-	cat $< | sed 's/^\(...\).*\t/\1\t/' | grep '^[a-z]\{3\}' | ./groupby 2 | sort -rgk2 | head -n 2048 > $@
+	cat $< | sed 's/^\(...\).*\t/\1\t/' | grep '^[a-z]\{3\}' | LC_ALL=c sort | ./groupby 2 | sort -rgk2 | head -n 1024 > $@
 
 data/2gram_digest.txt: data/prefixes.txt data/2gram.csv.gz
-	zcat data/2gram.csv.gz | pypy digest.py
+	pypy digest.py

@@ -1,4 +1,4 @@
-import sys
+import gzip
 
 prefixes = set()
 prefix_transitions = set()
@@ -12,12 +12,14 @@ common = {}
 n = 1
 out = ''
 for line in open('data/1gram_common.csv'):
-    word = line.split()[0]
+    word = line.lower().split()[0]
+    if word in common:
+        continue
     if word[:3] in prefixes:
         common[word] = n
         out += word + '\n'
         n += 1
-digest.write('%s\n' % (n - 1))
+digest.write('%s\n' % n)
 digest.write(out)
 
 print n
@@ -26,7 +28,7 @@ last_a = ''
 
 edges = [[] for _ in xrange(n)]
 
-for line in sys.stdin:
+for line in gzip.GzipFile('data/2gram.csv.gz'):
     parts = line.lower().split()
     if len(parts) == 3:
         a, b, count = parts
@@ -52,4 +54,4 @@ for n, out in enumerate(edges):
 
 digest.close()
 
-print len(prefix_transitions), len(prefix_transitions)/(1.0 * len(prefixes) * len(prefixes))
+print len(prefix_transitions), len(prefix_transitions) / (1.0 * len(prefixes) * len(prefixes))
