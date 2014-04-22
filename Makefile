@@ -1,6 +1,6 @@
 all: abbrase wordlist_bigrams.txt
 
-CFLAGS=-Wall -Wextra -O2
+CFLAGS=-Wall -Wextra -Os
 
 CORPUS_EXEMPLAR=googlebooks-eng-1M-2gram-20090715-99.csv.zip
 

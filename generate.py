@@ -27,7 +27,7 @@ class WordGraph(object):
     def get_followers(self, node_number):
         return set(digest.decode(self.followers[node_number]))
 
-    def gen_passphrase(self, length):
+    def gen_password(self, length):
         # pick the series of prefixes (3-letter abbreviations)
         # that will make up the password
         prefix_list = list(self.prefixes)
@@ -35,9 +35,17 @@ class WordGraph(object):
         out = []
         for _ in xrange(length):
             out.append(prefix_list[gen_cryptorand_int() & 1023])
+        return ''.join(out)
+
+    def gen_passphrase(self, length, password=None):
+        if password is None:
+            password = self.gen_password(length)
+        assert len(password) == length * 3
+        password_chunks = [password[x:x + 3]
+                           for x in xrange(0, len(password), 3)]
 
         # find possible words for each of the chosen prefixes
-        word_sets = [set(self.prefixes[p]) for p in out]
+        word_sets = [set(self.prefixes[p]) for p in password_chunks]
 
         # working backwards, reduce possible words for each prefix
         # to only those words that have an outgoing edge to a word
@@ -69,14 +77,15 @@ class WordGraph(object):
             last_word = word
 
         # print mismatch
-        return ''.join(out), ' '.join(out_words)
+        return password, ' '.join(out_words)
 
 graph = WordGraph('wordlist_bigrams.txt')
+
 
 def wordgraph_dump(a, b):
     for n in xrange(a, b):
         print '#%d: %s: %.30s %s' % (n, graph.wordlist[n], graph.followers[n],
-                digest.decode(graph.followers[n]))
+                                     digest.decode(graph.followers[n]))
 
 
 #wordgraph_dump(1, 3000)
@@ -85,7 +94,9 @@ count = 32
 length = 5
 print 'Generating %d passwords with %d bits of entropy' % (count, length * 10)
 pass_len = length * 3
-print 'Password'.ljust(pass_len), '  ', 'Phrase'
+print 'Password'.ljust(pass_len), '  ', 'Mnemonic'
 print '-' * pass_len, '  ', '-' * (4 * length)
 for _ in xrange(count):
     print '%s    %s' % graph.gen_passphrase(length)
+
+assert graph.gen_passphrase(5, password="untneragedronic")[1]=="until nerve agent dropped nice"
