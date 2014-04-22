@@ -123,7 +123,7 @@ if __name__ == '__main__':
     for line in open("data/prefixes.txt"):
         prefixes.add(line.split()[0])
 
-    digest = open('data/2gram_digest.txt', 'wb')
+    digest = open('wordlist_bigrams.txt', 'w')
 
     common = build_common(digest)
     edges = build_edges(common)

@@ -1,4 +1,4 @@
-all: data/2gram_digest.txt
+all: wordlist_bigrams.txt
 
 CORPUS_EXEMPLAR=googlebooks-eng-1M-2gram-20090715-99.csv.zip
 
@@ -23,5 +23,8 @@ data/1gram_common.csv: data/1gram.csv.gz
 data/prefixes.txt: data/1gram_common.csv
 	cat $< | sed 's/^\(...\).*\t/\1\t/' | grep '^[a-z]\{3\}' | LC_ALL=c sort | ./groupby 2 | sort -rgk2 | head -n 1024 > $@
 
-data/2gram_digest.txt: data/prefixes.txt data/2gram.csv.gz
+wordlist_bigrams.txt:
+	# relies on data/prefixes.txt data/2gram.csv.gz,
+	# but I don't know how to tell Make to only generate those if
+	# this target is missing
 	pypy digest.py

@@ -78,7 +78,7 @@ class WordGraph(object):
         # print mismatch
         return ''.join(out), ' '.join(out_words)
 
-graph = WordGraph('data/2gram_digest.txt')
+graph = WordGraph('wordlist_bigrams.txt')
 
 count = 32
 length = 5
