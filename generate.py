@@ -22,7 +22,7 @@ class WordGraph(object):
         self.followers = []
 
         for a in xrange(n_words):
-            self.followers.append(compressed_graph.readline().strip())
+            self.followers.append(compressed_graph.readline().rstrip('\n'))
 
     def get_followers(self, node_number):
         return set(digest.decode(self.followers[node_number]))
@@ -72,6 +72,14 @@ class WordGraph(object):
         return ''.join(out), ' '.join(out_words)
 
 graph = WordGraph('wordlist_bigrams.txt')
+
+def wordgraph_dump(a, b):
+    for n in xrange(a, b):
+        print '#%d: %s: %.30s %s' % (n, graph.wordlist[n], graph.followers[n],
+                digest.decode(graph.followers[n]))
+
+
+#wordgraph_dump(1, 3000)
 
 count = 32
 length = 5
