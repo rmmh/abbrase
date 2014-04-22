@@ -22,8 +22,7 @@ class WordGraph(object):
         self.followers = []
 
         for a in xrange(n_words):
-            line = compressed_graph.readline()
-            self.followers.append(line)
+            self.followers.append(compressed_graph.readline().strip())
 
     def get_followers(self, node_number):
         'lazily decode followers data'
@@ -79,15 +78,7 @@ class WordGraph(object):
         # print mismatch
         return ''.join(out), ' '.join(out_words)
 
-
 graph = WordGraph('data/2gram_digest.txt')
-
-differential_len = 0
-for word_n in xrange(1, 4000):
-    followers = sorted(graph.get_followers(word_n))
-    differential_len += sum(len(s) for s in digest.encode(list(followers)))
-print 'differential:', differential_len
-
 
 count = 32
 length = 5

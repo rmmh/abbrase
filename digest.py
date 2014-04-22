@@ -40,41 +40,62 @@ def build_edges(common):
                 last_a = a
             edges[common[a]].append(common[b])
 
-    print len(prefix_transitions), len(prefix_transitions) / (1.0 * len(prefixes) * len(prefixes))
+    print 'Attested prefix-prefix combinations:',
+    print '%.3f%%' % (100.0 * len(prefix_transitions) /
+                     (1.0 * len(prefixes) * len(prefixes)))
 
     return edges
 
 
 def encode(l):
-    ''' efficiently pack list of numbers into a string
+    ''' pack list of monotonically increasing positive integers into a string
 
-    replace list elements with the difference from the previous element,
-    then join with spaces
+    replace elements with the difference from the previous element minus one,
+    then encode as printable base-32 varints
 
-    >>> encode([1, 2, 3, 5])
-    '1 1 1 2'
+    >>> encode([1, 2, 3, 5, 8, 13, 21])
+    '@@@ABDG'
     '''
     enc = ''
     last_num = 0
     for num in l:
-        enc += str(num - last_num) + ' '
+        delta = num - last_num - 1
+        assert delta >= 0, "input must be strictly increasing"
         last_num = num
+        while True:
+            enc += chr((0x40 if delta < 0x20 else 0x20) | (delta & 0x1f))
+            delta >>= 5
+            if not delta:
+                break
     return enc
 
 
 def decode(enc):
     ''' inverse of encode
 
-    >>> deencode('1 1 2 3 1')
-    [1, 2, 4, 7, 8]
+    >>> deencode('@@@ABDG')
+    [1, 2, 3, 5, 8, 13, 21]
     '''
+    enc_ind = 0
     dec = []
     last_num = 0
-    for num in enc.split():
-        num = int(num)
-        dec.append(last_num + num)
-        last_num += num
+    while enc_ind < len(enc):
+        delta = 0
+        delta_ind = 0
+        while True:
+            val = ord(enc[enc_ind + delta_ind])
+            delta |= (val & 0x1f) << (5 * delta_ind)
+            delta_ind += 1
+            if val & 0x40:
+                break
+        enc_ind += delta_ind
+        num = last_num + int(delta) + 1
+        last_num = num
+        dec.append(num)
     return dec
+
+for l in ([1, 2, 3, 5], [1], [1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 3000000]):
+    assert decode(encode(l)) == l
 
 
 if __name__ == '__main__':
