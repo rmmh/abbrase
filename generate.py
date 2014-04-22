@@ -25,14 +25,7 @@ class WordGraph(object):
             self.followers.append(compressed_graph.readline().strip())
 
     def get_followers(self, node_number):
-        'lazily decode followers data'
-        outgoing = self.followers[node_number]
-
-        if isinstance(outgoing, str):
-            # line hasn't been decoded
-            outgoing = set(digest.decode(outgoing))
-            self.followers[node_number] = outgoing
-        return outgoing
+        return set(digest.decode(self.followers[node_number]))
 
     def gen_passphrase(self, length):
         # pick the series of prefixes (3-letter abbreviations)
