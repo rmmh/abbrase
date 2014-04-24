@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+
+import math
+import random
 import struct
 
 import digest
@@ -90,6 +94,58 @@ def wordgraph_dump(a, b):
 
 #wordgraph_dump(1, 3000)
 
+class PhraseGenerator(object):
+
+    def __init__(self, graph, n_words):
+        self.graph = graph
+        self.n_words = n_words
+        self.adjacency_lists = []
+        for n in xrange(n_words):
+            self.adjacency_lists.append([x for x in digest.decode(self.graph.followers[n])
+                                         if x < n_words])
+
+    def generate(self, length, chosen_path=None):
+        ''' generate a random phrase. this method is not cryptographically secure '''
+        # pick a phrase at random
+        # or, pick a path through a DAG uniformly from all paths possible
+
+        # 1) calculate how many paths can reach each word
+        path_counts = [[0] * self.n_words for _ in xrange(length)]
+
+        for n in xrange(self.n_words):
+            path_counts[0][n] = 1
+
+        for level in xrange(length - 1):
+            for n in xrange(self.n_words):
+                count = path_counts[level][n]
+                for out in self.adjacency_lists[n]:
+                    path_counts[level + 1][out] += count
+
+        # 2) pick a path to backtrack along
+        total_paths = sum(path_counts[-1])
+        if chosen_path is None:
+            # *WARNING* not cryptographically secure
+            chosen_path = random.randint(0, total_paths)
+        print '%.2f bits of entropy' % math.log(total_paths, 2),  "chose %d/%d" % (chosen_path, total_paths)
+
+        # 3) working backwards, pick the word that contributed our chosen_path
+        words = []
+        for level in xrange(length - 1, -1, -1):
+            for n in xrange(self.n_words):
+                if (not words or words[-1] in self.adjacency_lists[n]) and path_counts[level][n] > chosen_path:
+                    words.append(n)
+                    break
+                else:
+                    chosen_path -= path_counts[level][n]
+            else:
+                print "couldn't find a predecessor :(", words, level
+        phrase = ' '.join(self.graph.wordlist[word] for word in words[::-1])
+        print phrase
+
+#pg = PhraseGenerator(graph, 16)
+#pg.generate(5)
+
+
 count = 32
 length = 5
 print 'Generating %d passwords with %d bits of entropy' % (count, length * 10)
@@ -99,4 +155,5 @@ print '-' * pass_len, '  ', '-' * (4 * length)
 for _ in xrange(count):
     print '%s    %s' % graph.gen_passphrase(length)
 
-assert graph.gen_passphrase(5, password="untneragedronic")[1]=="until nerve agent dropped nice"
+assert graph.gen_passphrase(5, password="untneragedronic")[1] /
+                == "until nerve agent dropped nice"
