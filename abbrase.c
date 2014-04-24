@@ -152,9 +152,22 @@ void wordgraph_free(struct WordGraph *g) {
   free(g);
 }
 
-/* decode an int sequence encoded into a printable string */
+/* decode an adjacency list encoded as a string */
 struct IntVec *decode(char *enc) {
-  // Cf. decode in digest.py
+  /*
+  general encoding steps:
+  input: [1, 2, 3, 5, 80]
+  subtract previous value: [1, 1, 1, 2, 75]
+  subtract 1: [0, 0, 0, 1, 74]
+  contract runs of zeros: [0x3, 1, 74]
+  printably encode numbers as base-32 varints,
+  and runs of zeros as the 31 leftover characters:
+  output: "bA*B"
+
+  this function reverses the steps.
+
+  Cf. decode in digest.py
+  */
   int enc_ind = 0;
   struct IntVec *dec = intvec_alloc();
   int last_num = 0;
@@ -270,6 +283,9 @@ int main() {
     for (i = 0; i < length; i++) {
       followers = decode(g->followers_compressed[last_word]);
       intersect = intvec_intersect(word_sets[i], followers);
+      /* Picking the first word available biases the phrase towards more
+       * common words, and produces generally satisfactory results.
+       * N.B.: to save space, adjacency lists don't encode probabilities */
       last_word = intvec_get(intersect->len ? intersect : word_sets[i], 0);
       printf("%s ", g->words[last_word]);
       intvec_free(followers);
