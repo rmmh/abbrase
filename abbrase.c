@@ -1,4 +1,5 @@
 #include <err.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -209,19 +210,112 @@ void wordgraph_dump(struct WordGraph *g, int a, int b) {
   }
 }
 
-int main() {
-  struct WordGraph *g = wordgraph_init("wordlist_bigrams.txt");
+static int min(int a, int b) {
+  if (a <= b)
+    return a;
+  return b;
+}
 
-  int count = 32;
-  int length = 5;
+int edit_distance(const char *a, const char *b) {
+  // code based off http://hetland.org/coding/python/levenshtein.py
+
+  int n = strlen(a), m = strlen(b);
+
+  if (n > m) {
+    // ensure n <= m, to use O(min(n,m)) space
+    const char *tmp_s = a;
+    a = b;
+    b = tmp_s;
+    int tmp_i = n;
+    n = m;
+    m = tmp_i;
+  }
+
+  int cost[n + 1];
+
   int i, j;
+  int ins, del, sub;
+  int prevdiag; // lets us store only one row + one cell at a time
+
+  const int insert_cost = 1;
+  const int gap_cost = 1;
+  const int mismatch_cost = 1;
+
+  for (i = 0; i < n + 1; ++i)
+    cost[i] = i * insert_cost;
+
+  for (i = 1; i < m + 1; ++i) {
+    prevdiag = cost[0];
+    cost[0] = i * gap_cost;
+
+    for (j = 1; j < n + 1; ++j) {
+      ins = cost[j] + gap_cost;
+      del = cost[j - 1] + gap_cost;
+      sub = prevdiag;
+      if (a[j - 1] != b[i - 1])
+        sub += mismatch_cost;
+      prevdiag = cost[j];
+      cost[j] = min(ins, min(del, sub));
+    }
+  }
+
+  return cost[n];
+}
+
+/* find the closest word to the input */
+int wordgraph_find_word(struct WordGraph *g, const char *word) {
+  int i, best_word = 0, best_dist = 10000;
+  for (i = 1; i < g->n_words; i++) {
+    int dist = edit_distance(word, g->words[i]);
+    if (dist < best_dist) {
+      best_dist = dist;
+      best_word = i;
+    }
+  }
+  return best_word;
+}
+
+int main(int argc, char *argv[]) {
+  struct WordGraph *g = wordgraph_init("wordlist_bigrams.txt");
   // wordgraph_dump(g, 1, 3000)
+
+  long length = 0;
+  long count = 0;
+  int start_word = 0;
+  int i, j;
+
+  for (i = 1; i < argc; i++) {
+    errno = 0;
+    if (length == 0) {
+      length = strtol(argv[i], NULL, 10);
+      if (!errno && length > 0)
+        continue;
+      length = 0;
+    } else if (count == 0) {
+      count = strtol(argv[i], NULL, 10);
+      if (!errno && count > 0)
+        continue;
+      count = 0;
+    }
+    start_word = wordgraph_find_word(g, argv[i]);
+  }
+
+  if (!length)
+    length = 5;
+
+  if (!count)
+    count = 32;
+
   int fd_crypto;
   if ((fd_crypto = open("/dev/urandom", O_RDONLY)) < 0)
     err(5, "unable to get secure random numbers");
 
-  printf("Generating %d passwords with %d bits of entropy\n", count,
+  printf("Generating %ld passwords with %ld bits of entropy\n", count,
          length * 10);
+
+  if (start_word)
+    printf("    hook: %s\n", g->words[start_word]);
+
   int pass_len = length * 3;
   printf("%-*s    %s\n", pass_len, "Password", "Mnemonic");
   for (i = 0; i < pass_len; i++)
@@ -235,7 +329,7 @@ int main() {
     /* pick series of prefixes that will make up the passwords */
     int prefixes_chosen[length];
     if (read(fd_crypto, prefixes_chosen, sizeof(prefixes_chosen)) !=
-        (size_t)sizeof(prefixes_chosen))
+        sizeof(prefixes_chosen))
       err(6, "unable to read random numbers");
     /* find possible words for each of the chosen prefixes */
     struct IntVec *word_sets[length];
@@ -245,7 +339,7 @@ int main() {
       word_sets[i] = intvec_copy(g->prefixes[prefixes_chosen[i]].words);
     }
 
-    printf("    ");
+    printf("   ");
 
     /* working backwards, reduce possible words for each prefix to only
        those words that have a link to a word in the next set of possible words
@@ -279,7 +373,9 @@ int main() {
     }
 
     /* working forwards, pick a word for each prefix */
-    int last_word = 0;
+    int last_word = start_word;
+    if (last_word)
+      printf(" %s", g->words[last_word]);
     for (i = 0; i < length; i++) {
       followers = decode(g->followers_compressed[last_word]);
       intersect = intvec_intersect(word_sets[i], followers);
@@ -287,7 +383,8 @@ int main() {
        * common words, and produces generally satisfactory results.
        * N.B.: to save space, adjacency lists don't encode probabilities */
       last_word = intvec_get(intersect->len ? intersect : word_sets[i], 0);
-      printf("%s ", g->words[last_word]);
+      printf("%c", intersect->len ? ' ': ' ');
+      printf("%s", g->words[last_word]);
       intvec_free(followers);
       intvec_free(intersect);
     }
