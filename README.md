@@ -1,6 +1,6 @@
 #Abbrase#
 
-Abbrase is an abbreviated passphrase generator. An abbrase is one of the passwords it produces.
+Abbrase is an abbreviated passphrase generator. An abbrase is one of the passwords it produces. It generates a password and a phrase like "phyeigdolrejutt" and "physical eight dollars rejected utterly".
 
 Creating secure passwords is easy. Remembering them is hard. [Pwgen](http://sourceforge.net/projects/pwgen/) makes them memorable though prounouncability. XKCD [suggests](http://xkcd.com/936/) using a series of random common words, but memorizing series of unrelated words can be difficult, and typing long phrases can be tedious.
 
