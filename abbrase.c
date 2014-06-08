@@ -1,9 +1,10 @@
+#include <ctype.h>
 #include <err.h>
 #include <errno.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #define MAX_PREFIXES 1024
@@ -116,6 +117,10 @@ struct WordGraph *wordgraph_init(const char *filename) {
   g->followers_compressed = calloc(g->n_words, sizeof g->words[0]);
   for (i = 1; i < g->n_words; i++) {
     getline_trimmed(&g->words[i], graph_file);
+    /* extract lowercase prefix */
+    char prefix[PREFIX_LEN];
+    for (j = 0; j < PREFIX_LEN; j++)
+        prefix[j] = tolower(g->words[i][j]);
     /* add word to a prefix group */
     for (j = 0; j <= g->n_prefixes; ++j) {
       if (j == g->n_prefixes) {
@@ -123,10 +128,10 @@ struct WordGraph *wordgraph_init(const char *filename) {
         if (g->n_prefixes == MAX_PREFIXES)
           errx(2, "corrupted wordgraph file: too many prefixes");
         g->n_prefixes++;
-        memcpy(g->prefixes[j].prefix, g->words[i], PREFIX_LEN);
+        memcpy(g->prefixes[j].prefix, prefix, PREFIX_LEN);
         g->prefixes[j].words = intvec_alloc();
       }
-      if (!memcmp(g->words[i], g->prefixes[j].prefix, PREFIX_LEN)) {
+      if (!memcmp(g->prefixes[j].prefix, prefix, PREFIX_LEN)) {
         intvec_append(g->prefixes[j].words, i);
         break;
       }
@@ -343,7 +348,7 @@ int main(int argc, char *argv[]) {
 
     /* working backwards, reduce possible words for each prefix to only
        those words that have a link to a word in the next set of possible words
-       */
+     */
     int mismatch = 0; /* track how many links were impossible */
     struct IntVec *next_words, *new_words, *followers, *words, *intersect;
     next_words = NULL;

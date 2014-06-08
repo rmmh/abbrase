@@ -6,12 +6,13 @@ def build_common(digest):
     n = 1
     out = ''
     for line in open('data/1gram_common.csv'):
-        word = line.lower().split()[0]
+        word_orig = line.split()[0]
+        word = word_orig.lower()
         if word in common:
             continue
         if word[:3] in prefixes:
             common[word] = n
-            out += word + '\n'
+            out += word_orig + '\n'
             n += 1
     digest.write('%s\n' % n)
     digest.write(out)
