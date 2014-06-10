@@ -83,8 +83,6 @@ class WordGraph(object):
         # print mismatch
         return password, ' '.join(out_words)
 
-graph = WordGraph('wordlist_bigrams.txt')
-
 
 def wordgraph_dump(a, b):
     for n in xrange(a, b):
@@ -92,7 +90,6 @@ def wordgraph_dump(a, b):
                                      digest.decode(graph.followers[n]))
 
 
-#wordgraph_dump(1, 3000)
 
 class PhraseGenerator(object):
 
@@ -146,14 +143,17 @@ class PhraseGenerator(object):
 #pg.generate(5)
 
 
-count = 32
-length = 5
-print 'Generating %d passwords with %d bits of entropy' % (count, length * 10)
-pass_len = length * 3
-print 'Password'.ljust(pass_len), '  ', 'Mnemonic'
-print '-' * pass_len, '  ', '-' * (4 * length)
-for _ in xrange(count):
-    print '%s    %s' % graph.gen_passphrase(length)
+if __name__ == '__main__':
+    graph = WordGraph('wordlist_bigrams.txt')
+    # wordgraph_dump(1, 3000)
+    count = 32
+    length = 5
+    print 'Generating %d passwords with %d bits of entropy' % (count, length * 10)
+    pass_len = length * 3
+    print 'Password'.ljust(pass_len), '  ', 'Mnemonic'
+    print '-' * pass_len, '  ', '-' * (4 * length)
+    for _ in xrange(count):
+        print '%s    %s' % graph.gen_passphrase(length)
 
-assert graph.gen_passphrase(5, password="untneragedronic")[1] /
-                == "until nerve agent dropped nice"
+    assert graph.gen_passphrase(5, password="untneragedronic")[1] \
+                    == "until nerve agent dropped nice"
