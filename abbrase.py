@@ -21,7 +21,7 @@ class WordGraph(object):
         for n in xrange(1, n_words, 1):
             word = compressed_graph.readline().strip()
             self.wordlist.append(word)
-            self.prefixes.setdefault(word[:3], []).append(n)
+            self.prefixes.setdefault(word[:3].lower(), []).append(n)
 
         self.followers = []
 
