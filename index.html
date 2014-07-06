@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Abbrase.js</title>
+	<script src="abbrase.js"></script>
+</head>
+<body>
+<input type="button" onclick="newbatch();" value="Generate"> memorable passwords using
+<input type="number" min="1" max="100" value="5" id="wordcount" size="3" onchange="newbatch();"> word phrases.
+
+<pre id="output"></pre>
+
+<br>
+<p>(The password is the first three letters of each word in the mnemonic)</p>
+
+<br><br><a href="https://github.com/rmmh/abbrase">github.com/rmmh/abbrase</a>
+
+<script type="text/javascript">
+var wordlist_url = "wordlist_bigrams.txt";
+//wordlist_url = "http://cdn.rawgit.com/rmmh/abbrase/master/wordlist_bigrams.txt";
+var graph = new WordGraph(wordlist_url);
+var generator = new PassphraseGenerator(graph);
+
+graph.onprogress = function(perc) {
+	document.getElementById("output").textContent = "Downloading 20MB word list... " + perc + "% done";
+}
+
+function newbatch() {
+	var length = parseInt(document.getElementById("wordcount").value) || 5;
+	document.getElementById("output").textContent = generator.make_table(length, 32);
+}
+
+graph.onready = newbatch;
+graph.load();
+</script>
+</body>
+</html>
