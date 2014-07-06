@@ -3,34 +3,75 @@
 <head>
 	<title>Abbrase.js</title>
 	<script src="abbrase.js"></script>
+	<style type="text/css">
+	body { background-color: #222; color: #ccc; }
+	pre { border: 1px solid #888; padding: 10px; overflow-x: auto; }
+	a { color: #44f; }
+	#content { width: 800px; margin: auto;}
+	#wordcount { width: 3em; }
+	</style>
 </head>
 <body>
+<a href="https://github.com/rmmh/abbrase"><img style="position: absolute; top: 0; left: 0; border: 0;" src="forkme.png"></a>
+
+<div id="content">
+
+<h1>Abbrase</h1>
+Password generation using abbreviated phrases<br><br>
+
+
 <input type="button" onclick="newbatch();" value="Generate"> memorable passwords using
-<input type="number" min="1" max="100" value="5" id="wordcount" size="3" onchange="newbatch();"> word phrases.
+<input id="wordcount" type="number" min="1" max="100" value="5" onchange="newbatch();"> word phrases.
 
 <pre id="output"></pre>
 
-<br>
-<p>(The password is the first three letters of each word in the mnemonic)</p>
 
-<br><br><a href="https://github.com/rmmh/abbrase">github.com/rmmh/abbrase</a>
+<h2>How does this work?</h2>
+First, secure random numbers are generated.
+<pre id="explain_numbers"></pre>
+Each number selects a three letter abbreviation. The password is made by joining them together.
+<pre id="explain_password"></pre>
+Finally, a phrase is found that abbreviates to the password. Words that are normally found together are chosen to make the phrase more memorable.
+<pre id="explain_mnemonic"></pre>
+The mnemonic is much easier to remember than the input numbers, but equally secure!<br>
+<br>
+All steps are performed locally in your browser, and not sent to any other server. For more security, try the Python or C versions in the Abbrase <a href="https://github.com/rmmh/abbrase">github repository</a>.
+
+</div>
 
 <script type="text/javascript">
 var wordlist_url = "wordlist_bigrams.txt";
-//wordlist_url = "http://cdn.rawgit.com/rmmh/abbrase/master/wordlist_bigrams.txt";
 var graph = new WordGraph(wordlist_url);
 var generator = new PassphraseGenerator(graph);
 
+function setTextContent(id, text) {
+	document.getElementById(id).textContent = text;
+}
+
 graph.onprogress = function(perc) {
-	document.getElementById("output").textContent = "Downloading 20MB word list... " + perc + "% done";
+	setTextContent("output", "Downloading 20MB word list... " + perc + "% done");
 }
 
 function newbatch() {
 	var length = parseInt(document.getElementById("wordcount").value) || 5;
-	document.getElementById("output").textContent = generator.make_table(length, 32);
+	setTextContent("output", generator.make_table(length, 32));
 }
 
-graph.onready = newbatch;
+var pretty_arraybuffer = function(ab) {
+	var ret = [];
+	for (var i = 0; i < ab.length; i++)
+		ret.push(ab[i]);
+	return '[' + ret.join(', ') + ']';
+}
+
+graph.onready = function() {
+	var example_password = generator.gen_password(5);
+	setTextContent("explain_numbers", pretty_arraybuffer(example_password.numbers));
+	setTextContent("explain_password", example_password.password);
+	setTextContent("explain_mnemonic", example_password.mnemonic);
+	newbatch();
+}
+
 graph.load();
 </script>
 </body>

@@ -147,7 +147,8 @@ PassphraseGenerator.prototype.gen_password = function(length) {
 
 	/* find possible words for each of the chosen prefixes */
 	for (var i = 0; i < length; i++) {
-		prefixes_chosen[i] = this.graph.prefix_list[prefix_numbers[i] % 1024];
+		prefix_numbers[i] = prefix_numbers[i] % 1024;
+		prefixes_chosen[i] = this.graph.prefix_list[prefix_numbers[i]];
 		out_password += prefixes_chosen[i];
 		word_sets.push(this.graph.prefixes[prefixes_chosen[i]]);
 	}
@@ -191,7 +192,10 @@ PassphraseGenerator.prototype.gen_password = function(length) {
 		out_words.push(this.graph.words[last_word]);
 	}
 
-	return [out_password, out_words.join(" ")];
+	return {"password": out_password,
+		"mnemonic": out_words.join(" "),
+		"mismatch": mismatch,
+		"numbers": prefix_numbers};
 };
 
 function ljust(inp, length, pad) {
@@ -209,9 +213,10 @@ PassphraseGenerator.prototype.make_table = function(length, count) {
 
 	output += ljust("Password", 3 * length) + '    ' + 'Mnemonic\n';
 	output += ljust('', 3 * length, '-') + '    ' + ljust('', 4 * length, '-') + '\n';
+
 	for (var i = 0; i < 32; i++) {
 		var gen = generator.gen_password(length);
-		output += gen[0] + '    ' + gen[1] + '\n';
+		output += gen.password + '    ' + gen.mnemonic + '\n';
 	}
 	return output;
 	document.getElementById("output").textContent = output;
