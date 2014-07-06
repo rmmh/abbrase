@@ -101,7 +101,7 @@ def decode(enc):
         else:
             val = ord(enc[enc_ind])
             if val >= 0x60:
-                zero_run = ord(enc[enc_ind]) & 0x1f
+                zero_run = val & 0x1f
                 delta_ind += 1
             else:
                 while True:
@@ -111,7 +111,7 @@ def decode(enc):
                     if val & 0x40:
                         break
         enc_ind += delta_ind
-        num = last_num + int(delta) + 1
+        num = last_num + delta + 1
         last_num = num
         dec.append(num)
     return dec
