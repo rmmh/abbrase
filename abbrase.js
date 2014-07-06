@@ -165,7 +165,7 @@ PassphraseGenerator.prototype.gen_password = function(length) {
 			for (var j = 0; j < words.length; j++) {
 				var word = words[j];
 				var followers = this.graph.get_followers(word);
-				if (intersect(next_words, followers))
+				if (intersect(next_words, followers).length)
 					new_words.push(word);
 			}
 		}
