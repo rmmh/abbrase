@@ -185,6 +185,7 @@ PassphraseGenerator.prototype.gen_password = function(length) {
 
 	/* working forwards, pick a word for each prefix */
 	var out_words = [];
+	var phrase_rank = 0;
 	var last_word = 0;
 	for (var i = 0; i < length; i++) {
 		var followers = this.graph.get_followers(last_word);
@@ -193,11 +194,13 @@ PassphraseGenerator.prototype.gen_password = function(length) {
 		* common words, and produces generally satisfactory results.
 		* N.B.: to save space, adjacency lists don't encode probabilities */
 		last_word = (forward.length > 0 ? forward : word_sets[i])[0];
+		phrase_rank += last_word;
 		out_words.push(this.graph.words[last_word]);
 	}
 
 	return {"password": out_password,
 		"mnemonic": out_words.join(" "),
+		"phrase_rank": phrase_rank,
 		"mismatch": mismatch,
 		"numbers": prefix_numbers};
 };
@@ -212,18 +215,36 @@ function ljust(inp, length, pad) {
 }
 
 PassphraseGenerator.prototype.make_table = function(length, count) {
+	var passwords = [];
+
+	for (var i = 0; i < count; i++) {
+		passwords.push(generator.gen_password(length));
+	}
+
+	// Sort by the sum of the word positions -- meaning phrases with more common
+	// words come first.
+	//
+	// This tends to rank desirable passwords higher, but could aid an attacker
+	// leveraging selection biases (maximum entropy loss is log2(count) bits).
+
+	passwords.sort(function (a, b) {
+		return a.phrase_rank - b.phrase_rank;
+	});
+
 	output = 'Generating ' + count + ' passwords with ';
 	output += (length * 10) + ' bits of entropy\n';
 
 	output += ljust("Password", 3 * length) + '    ' + 'Mnemonic\n';
 	output += ljust('', 3 * length, '-') + '    ' + ljust('', 4 * length, '-') + '\n';
 
-	for (var i = 0; i < 32; i++) {
-		var gen = generator.gen_password(length);
-		output += gen.password + '    ' + gen.mnemonic + '\n';
+	for (var i = 0; i < count; i++) {
+		var gen = passwords[i];
+		output += gen.password + '    ' + gen.mnemonic;
+		// output += ' ' + gen.phrase_rank + ' ' + gen.mismatch;
+		output += '\n';
 	}
+
 	return output;
-	document.getElementById("output").textContent = output;
 };
 
 function pretty_arraybuffer(ab) {
