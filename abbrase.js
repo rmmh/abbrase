@@ -19,6 +19,10 @@ WordGraph.prototype.load = function() {
 	xhr.totalsize = 20670394;
 	var self = this;
 	xhr.onreadystatechange = function(evt) {
+		if (xhr.status >= 400) {
+			if (self.onprogress)
+				self.onprogress(-xhr.status);
+		}
 		if (xhr.readyState === 3) {
 			var perc = (100 * xhr.response.length / xhr.totalsize)|0;
 			if (xhr.perc != perc) {
@@ -221,3 +225,10 @@ PassphraseGenerator.prototype.make_table = function(length, count) {
 	return output;
 	document.getElementById("output").textContent = output;
 };
+
+function pretty_arraybuffer(ab) {
+	var ret = [];
+	for (var i = 0; i < ab.length; i++)
+		ret.push(ab[i]);
+	return '[' + ret.join(', ') + ']';
+}

@@ -20,7 +20,7 @@
 Password generation using abbreviated phrases<br><br>
 
 
-<input type="button" onclick="newbatch();" value="Generate"> memorable passwords using
+<input type="button" onclick="newbatch();" value="Generate"> passwords using
 <input id="wordcount" type="number" min="1" max="100" value="5" onchange="newbatch();"> word phrases.
 
 <pre id="output"></pre>
@@ -48,29 +48,25 @@ function setTextContent(id, text) {
 }
 
 graph.onprogress = function(perc) {
-	setTextContent("output", "Downloading 20MB word list... " + perc + "% done");
+	if (perc < 0)
+		setTextContent("output", "Error downloading: HTTP Error " + -perc);
+	else
+		setTextContent("output", "Downloading 20MB word list... " + perc + "% done");
 }
+graph.onprogress(0);
 
 function newbatch() {
 	var length = parseInt(document.getElementById("wordcount").value) || 5;
-	setTextContent("output", generator.make_table(length, 32));
-}
 
-var pretty_arraybuffer = function(ab) {
-	var ret = [];
-	for (var i = 0; i < ab.length; i++)
-		ret.push(ab[i]);
-	return '[' + ret.join(', ') + ']';
-}
-
-graph.onready = function() {
-	var example_password = generator.gen_password(5);
+	var example_password = generator.gen_password(length);
 	setTextContent("explain_numbers", pretty_arraybuffer(example_password.numbers));
 	setTextContent("explain_password", example_password.password);
 	setTextContent("explain_mnemonic", example_password.mnemonic);
-	newbatch();
+
+	setTextContent("output", generator.make_table(length, 32));
 }
 
+graph.onready = newbatch;
 graph.load();
 </script>
 </body>
