@@ -40,8 +40,7 @@ All steps are performed locally in your browser, and not sent to any other serve
 </div>
 
 <script type="text/javascript">
-var wordlist_url = "wordlist_bigrams.txt";
-var graph = new WordGraph(wordlist_url);
+var graph = new WordGraph("wordlist_bigrams.txt");
 var generator = new PassphraseGenerator(graph);
 
 function setTextContent(id, text) {
