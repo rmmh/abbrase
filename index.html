@@ -4,7 +4,7 @@
 	<title>Abbrase.js</title>
 	<script src="abbrase.js"></script>
 	<style type="text/css">
-	body { background-color: #222; color: #ccc; }
+	body { background-color: #222; color: #ccc; font-family: sans-serif; }
 	pre { border: 1px solid #888; padding: 10px; overflow-x: auto; }
 	a { color: #44f; }
 	#content { width: 800px; margin: auto;}
@@ -27,9 +27,9 @@ Password generation using abbreviated phrases<br><br>
 
 
 <h2>How does this work?</h2>
-First, secure random numbers are generated.
+First, <span id="explain_count"></span> secure random numbers are generated. Each number ranges from 0-1023, giving 10 bits of entropy.
 <pre id="explain_numbers"></pre>
-Each number selects a three letter abbreviation. The password is made by joining them together.
+Each number is converted into a three letter abbreviation. The password is made by joining them together. Abbreviations are taken from a pool of the 1024 most common English word prefixes.
 <pre id="explain_password"></pre>
 Finally, a phrase is found that abbreviates to the password. Words that are normally found together are chosen to make the phrase more memorable.
 <pre id="explain_mnemonic"></pre>
@@ -59,6 +59,7 @@ function newbatch() {
 	var length = parseInt(document.getElementById("wordcount").value) || 5;
 
 	var example_password = generator.gen_password(length);
+	setTextContent("explain_count", length);
 	setTextContent("explain_numbers", pretty_arraybuffer(example_password.numbers));
 	setTextContent("explain_password", example_password.password);
 	setTextContent("explain_mnemonic", example_password.mnemonic);
