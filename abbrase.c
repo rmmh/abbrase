@@ -370,7 +370,6 @@ int generate_mnemonic(
   return mismatch;
 }
 
-
 int main(int argc, char *argv[]) {
   struct WordGraph *g = wordgraph_init("wordlist_bigrams.txt");
   //wordgraph_dump(g, 0, 3000);
@@ -378,7 +377,15 @@ int main(int argc, char *argv[]) {
   long length = 0;
   long count = 0;
   int start_word = 0;
-  int i;
+  int i, c;
+
+  while ((c = getopt(argc, argv, "h")) != -1) {
+    switch (c) {
+      case 'h':
+      default:
+        errx(1, "usage: [-h]/[-t] [length] [count] [hook word]");
+    }
+  }
 
   for (i = 1; i < argc; i++) {
     errno = 0;
