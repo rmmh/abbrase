@@ -280,14 +280,95 @@ int wordgraph_find_word(struct WordGraph *g, const char *word) {
   return best_word;
 }
 
+/* pick series of prefixes that will make up the passwords */
+void generate_prefixes(int *prefix_indices_out, int length) {
+  int fd_crypto, i;
+  if ((fd_crypto = open("/dev/urandom", O_RDONLY)) < 0)
+    err(5, "unable to get secure random numbers");
+
+  int read_len = sizeof(*prefix_indices_out) * length;
+  if (read(fd_crypto, prefix_indices_out, read_len) != read_len)
+    err(6, "unable to read random numbers");
+
+  for (i = 0; i < length; i++) {
+    prefix_indices_out[i] &= MAX_PREFIXES - 1;
+  }
+
+  close(fd_crypto);
+}
+
+/* generate a reasonably memorable phrase for the prefixes */
+int generate_mnemonic(
+  struct WordGraph *g, int *prefix_indices, int *word_indices_out, int length) {
+  /* find possible words for each of the chosen prefixes */
+  int i, j;
+
+  struct IntVec *word_sets[length];
+  for (i = 0; i < length; i++) {
+    word_sets[i] = intvec_copy(g->prefixes[prefix_indices[i]].words);
+  }
+
+  /* working backwards, reduce possible words for each prefix to only
+     those words that have a link to a word in the next set of possible words
+   */
+  int mismatch = 0; /* track how many links were impossible */
+  struct IntVec *next_words, *new_words, *followers, *words, *intersect;
+  next_words = NULL;
+  for (i = length - 1; i >= 0; i--) {
+    words = word_sets[i];
+    new_words = intvec_alloc();
+    if (next_words) {
+      for (j = 0; j < words->len; j++) {
+        int word = intvec_get(words, j);
+        followers = decode(g->followers_compressed[word]);
+        intersect = intvec_intersect(next_words, followers);
+        if (intersect->len)
+          intvec_append(new_words, word);
+        intvec_free(intersect);
+        intvec_free(followers);
+      }
+    }
+    if (new_words->len) {
+      intvec_free(word_sets[i]);
+      word_sets[i] = new_words;
+    } else {
+      intvec_free(new_words);
+      mismatch++;
+    }
+
+    next_words = word_sets[i];
+  }
+
+  /* working forwards, pick a word for each prefix */
+  int last_word = word_indices_out[0];
+  for (i = 0; i < length; i++) {
+    followers = decode(g->followers_compressed[last_word]);
+    intersect = intvec_intersect(word_sets[i], followers);
+    /* Picking the first word available biases the phrase towards more
+     * common words, and produces generally satisfactory results.
+     * N.B.: to save space, adjacency lists don't encode probabilities */
+    last_word = intvec_get(intersect->len ? intersect : word_sets[i], 0);
+    word_indices_out[i] = last_word;
+    intvec_free(followers);
+    intvec_free(intersect);
+  }
+
+  for (i = 0; i < length; i++) {
+    intvec_free(word_sets[i]);
+  }
+
+  return mismatch;
+}
+
+
 int main(int argc, char *argv[]) {
   struct WordGraph *g = wordgraph_init("wordlist_bigrams.txt");
-  // wordgraph_dump(g, 1, 3000)
+  //wordgraph_dump(g, 0, 3000);
 
   long length = 0;
   long count = 0;
   int start_word = 0;
-  int i, j;
+  int i;
 
   for (i = 1; i < argc; i++) {
     errno = 0;
@@ -311,10 +392,6 @@ int main(int argc, char *argv[]) {
   if (!count)
     count = 32;
 
-  int fd_crypto;
-  if ((fd_crypto = open("/dev/urandom", O_RDONLY)) < 0)
-    err(5, "unable to get secure random numbers");
-
   printf("Generating %ld passwords with %ld bits of entropy\n", count,
          length * 10);
 
@@ -331,72 +408,22 @@ int main(int argc, char *argv[]) {
   printf("\n");
 
   while (count--) {
-    /* pick series of prefixes that will make up the passwords */
-    int prefixes_chosen[length];
-    if (read(fd_crypto, prefixes_chosen, sizeof(prefixes_chosen)) !=
-        sizeof(prefixes_chosen))
-      err(6, "unable to read random numbers");
-    /* find possible words for each of the chosen prefixes */
-    struct IntVec *word_sets[length];
-    for (i = 0; i < length; i++) {
-      prefixes_chosen[i] &= MAX_PREFIXES - 1;
-      printf("%.3s", g->prefixes[prefixes_chosen[i]].prefix);
-      word_sets[i] = intvec_copy(g->prefixes[prefixes_chosen[i]].words);
-    }
+    int prefix_indices[length];
+    int word_indices[length];
+    word_indices[0] = start_word;
+    generate_prefixes(prefix_indices, length);
+    generate_mnemonic(g, prefix_indices, word_indices, length);
+
+    for (i = 0; i < length; i++)
+      printf("%.3s", g->prefixes[prefix_indices[i]].prefix);
 
     printf("   ");
 
-    /* working backwards, reduce possible words for each prefix to only
-       those words that have a link to a word in the next set of possible words
-     */
-    int mismatch = 0; /* track how many links were impossible */
-    struct IntVec *next_words, *new_words, *followers, *words, *intersect;
-    next_words = NULL;
-    for (i = length - 1; i >= 0; i--) {
-      words = word_sets[i];
-      new_words = intvec_alloc();
-      if (next_words) {
-        for (j = 0; j < words->len; j++) {
-          int word = intvec_get(words, j);
-          followers = decode(g->followers_compressed[word]);
-          intersect = intvec_intersect(next_words, followers);
-          if (intersect->len)
-            intvec_append(new_words, word);
-          intvec_free(intersect);
-          intvec_free(followers);
-        }
-      }
-      if (new_words->len) {
-        intvec_free(word_sets[i]);
-        word_sets[i] = new_words;
-      } else {
-        intvec_free(new_words);
-        mismatch++;
-      }
+    if (start_word)
+      printf(" %s", g->words[start_word]);
 
-      next_words = word_sets[i];
-    }
-
-    /* working forwards, pick a word for each prefix */
-    int last_word = start_word;
-    if (last_word)
-      printf(" %s", g->words[last_word]);
-    for (i = 0; i < length; i++) {
-      followers = decode(g->followers_compressed[last_word]);
-      intersect = intvec_intersect(word_sets[i], followers);
-      /* Picking the first word available biases the phrase towards more
-       * common words, and produces generally satisfactory results.
-       * N.B.: to save space, adjacency lists don't encode probabilities */
-      last_word = intvec_get(intersect->len ? intersect : word_sets[i], 0);
-      printf("%c", intersect->len ? ' ': ' ');
-      printf("%s", g->words[last_word]);
-      intvec_free(followers);
-      intvec_free(intersect);
-    }
-
-    for (i = 0; i < length; i++) {
-      intvec_free(word_sets[i]);
-    }
+    for (i = 0; i < length; i++)
+      printf(" %s", g->words[word_indices[i]]);
 
     printf("\n");
   }
