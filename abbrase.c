@@ -462,6 +462,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  if( argc > 1 &&
+    (strcmp(argv[1],"-h") == 0 || strcmp(argv[1],"--help") == 0)
+    ){
+    printf("Usage: abbrase <number of bits/10> <number of passwords> <start word>\n");
+    exit(0);
+  }
+
   for (i = 1; i < argc; i++) {
     errno = 0;
     if (length == 0) {
