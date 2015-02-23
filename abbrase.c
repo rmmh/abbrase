@@ -82,15 +82,22 @@ struct IntVec *intvec_intersect(struct IntVec *a, struct IntVec *b) {
   return ret;
 }
 
+struct Prefix {
+  char prefix[PREFIX_LEN];
+  struct IntVec *words;
+};
+
+int prefix_cmp(const void *a, const void *b) {
+  return memcmp(((const struct Prefix*)a)->prefix,
+                ((const struct Prefix*)b)->prefix, PREFIX_LEN);
+}
+
 struct WordGraph {
   int n_words;
   int n_prefixes;
   char **words;
   char **followers_compressed;
-  struct {
-    char prefix[PREFIX_LEN];
-    struct IntVec *words;
-  } prefixes[MAX_PREFIXES];
+  struct Prefix prefixes[MAX_PREFIXES];
 };
 
 void getline_trimmed(char **target, FILE *stream) {
@@ -137,6 +144,9 @@ struct WordGraph *wordgraph_init(const char *filename) {
       }
     }
   }
+  /* sort prefixes (so passwords can be enumerated in order) */
+  qsort(g->prefixes, g->n_prefixes, sizeof(struct Prefix), prefix_cmp);
+
   if (g->n_prefixes != MAX_PREFIXES)
     errx(3, "corrupted wordgraph file: not enough prefixes");
   for (i = 0; i < g->n_words; i++)
