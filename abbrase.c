@@ -370,6 +370,49 @@ int generate_mnemonic(
   return mismatch;
 }
 
+void write_passphrase(
+    struct Prefix *prefixes, int *prefix_indices, int length, char *buf) {
+  int i;
+  for (i = 0; i < length; i++)
+    sprintf(buf + 3 * i, "%.3s", prefixes[prefix_indices[i]].prefix);
+}
+
+void run_tests(struct WordGraph *g) {
+  /* enumerate passphrases, assert that there are as many as we expect */
+  int i, length = 2;
+  long expected = 1L << (length * 10L);
+  long actual = 0;
+
+  int prefix_indices[length];
+  char passphrase[length * 3 + 1], last_passphrase[length * 3 + 1];
+
+  last_passphrase[0] = 0;
+  bzero(prefix_indices, sizeof(prefix_indices));
+  while (1) {
+    write_passphrase(g->prefixes, prefix_indices, length, passphrase);
+    if (strcmp(passphrase, last_passphrase) > 0) {
+      actual++;
+    } else {
+      errx(40, "passphrase out of order! %s -> %s",
+        last_passphrase, passphrase);
+    }
+    memcpy(last_passphrase, passphrase, sizeof(last_passphrase));
+
+    /* next passphrase */
+    for (i = length - 1; i >= 0; --i) {
+      prefix_indices[i]++;
+      if (prefix_indices[i] != MAX_PREFIXES)
+        break;
+      prefix_indices[i] = 0;
+    }
+    if (i == -1)
+      break;
+  }
+
+  if (actual != expected)
+    errx(42, "test failed! expected: %ld != actual: %ld", expected, actual);
+}
+
 int main(int argc, char *argv[]) {
   struct WordGraph *g = wordgraph_init("wordlist_bigrams.txt");
   //wordgraph_dump(g, 0, 3000);
@@ -379,8 +422,11 @@ int main(int argc, char *argv[]) {
   int start_word = 0;
   int i, c;
 
-  while ((c = getopt(argc, argv, "h")) != -1) {
+  while ((c = getopt(argc, argv, "ht")) != -1) {
     switch (c) {
+      case 't':
+        run_tests(g);
+        return 0;
       case 'h':
       default:
         errx(1, "usage: [-h]/[-t] [length] [count] [hook word]");
@@ -427,14 +473,13 @@ int main(int argc, char *argv[]) {
   while (count--) {
     int prefix_indices[length];
     int word_indices[length];
+    char passphrase[3 * length + 1];
     word_indices[0] = start_word;
     generate_prefixes(prefix_indices, length);
     generate_mnemonic(g, prefix_indices, word_indices, length);
 
-    for (i = 0; i < length; i++)
-      printf("%.3s", g->prefixes[prefix_indices[i]].prefix);
-
-    printf("   ");
+    write_passphrase(g->prefixes, prefix_indices, length, passphrase);
+    printf("%s   ", passphrase);
 
     if (start_word)
       printf(" %s", g->words[start_word]);
