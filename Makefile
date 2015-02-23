@@ -1,6 +1,8 @@
 all: abbrase wordlist_bigrams.txt
 
-CFLAGS=-Wall -Wextra -Os
+PREFIX?=/usr/local
+datadir?=${PREFIX}/share/abbrase
+CFLAGS=-Wall -Wextra -Os -DDATADIR=${datadir}
 
 CORPUS_EXEMPLAR=googlebooks-eng-1M-2gram-20090715-99.csv.zip
 
@@ -30,3 +32,11 @@ wordlist_bigrams.txt:
 	# but I don't know how to tell Make to only generate those if
 	# this target is missing
 	pypy digest.py
+
+clean:
+	rm -f abbrase
+
+install: all
+	install -d $(DESTDIR)/$(PREFIX)/bin $(DESTDIR)/$(datadir)/
+	install abbrase $(DESTDIR)/$(PREFIX)/bin
+	install wordlist_bigrams.txt $(DESTDIR)/$(datadir)/

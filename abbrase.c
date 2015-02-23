@@ -2,6 +2,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,11 +112,8 @@ void getline_trimmed(char **target, FILE *stream) {
     (*target)[len - 1] = 0;
 }
 
-struct WordGraph *wordgraph_init(const char *filename) {
+struct WordGraph *wordgraph_init(FILE *graph_file) {
   int i, j;
-  FILE *graph_file = fopen(filename, "r");
-  if (!graph_file)
-    err(1, "unable to open %s", filename);
   struct WordGraph *g = malloc(sizeof *g);
   if (fscanf(graph_file, "%d ", &g->n_words) != 1)
     err(1, "corrupted wordgraph file");
@@ -413,9 +411,40 @@ void run_tests(struct WordGraph *g) {
     errx(42, "test failed! expected: %ld != actual: %ld", expected, actual);
 }
 
+FILE *open_graph_file(char *executable, const char *graph_filename) {
+  // #1 try cwd
+  FILE *graph_file = fopen(graph_filename, "r");
+  if (!graph_file) {
+    // #2: try executable directory
+    char *binary_dir = dirname(executable);
+    char path[256];
+    snprintf(path, 255, "%s/%s", binary_dir, graph_filename);
+    graph_file = fopen(path, "r");
+  }
+#ifdef DATADIR
+#define QUOTE(name) #name
+#define STR(macro) QUOTE(macro)
+  if (!graph_file) {
+    // #3: datadir
+    char path[256];
+    snprintf(path, 255, STR(DATADIR) "/%s", graph_filename);
+    graph_file = fopen(path, "r");
+  }
+#endif
+  return graph_file;
+}
+
 int main(int argc, char *argv[]) {
-  struct WordGraph *g = wordgraph_init("wordlist_bigrams.txt");
+  struct WordGraph *g ;
+  const char *graph_filename = "wordlist_bigrams.txt";
+  FILE *graph_file = open_graph_file(argv[0], graph_filename);
+
+  if (!graph_file)
+    err(1, "unable to find %s", graph_filename);
+
+  g = wordgraph_init(graph_file);
   //wordgraph_dump(g, 0, 3000);
+
 
   long length = 0;
   long count = 0;
