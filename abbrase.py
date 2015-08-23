@@ -41,11 +41,9 @@ class WordGraph(object):
             out.append(prefix_list[gen_cryptorand_int() & 1023])
         return ''.join(out)
 
-    def gen_passphrase(self, length, password=None):
-        if password is None:
-            password = self.gen_password(length)
-        assert len(password) == length * 3
-        password_chunks = [password[x:x + 3]
+    def gen_passphrase(self, password=None, skipwords=None):
+        assert len(password) % 3 == 0
+        password_chunks = [password[x:x + 3].lower()
                            for x in xrange(0, len(password), 3)]
 
         # find possible words for each of the chosen prefixes
@@ -81,7 +79,7 @@ class WordGraph(object):
             last_word = word
 
         # print mismatch
-        return password, ' '.join(out_words)
+        return ' '.join(out_words)
 
 
 def wordgraph_dump(a, b):
@@ -90,19 +88,18 @@ def wordgraph_dump(a, b):
                                      digest.decode(graph.followers[n]))
 
 
-
 class PhraseGenerator(object):
-
     def __init__(self, graph, n_words):
         self.graph = graph
         self.n_words = n_words
         self.adjacency_lists = []
         for n in xrange(n_words):
-            self.adjacency_lists.append([x for x in digest.decode(self.graph.followers[n])
-                                         if x < n_words])
+            self.adjacency_lists.append(
+                [x for x in digest.decode(self.graph.followers[n])
+                 if x < n_words])
 
     def generate(self, length, chosen_path=None):
-        ''' generate a random phrase. this method is not cryptographically secure '''
+        ''' generate a random phrase. this is not cryptographically secure '''
         # pick a phrase at random
         # or, pick a path through a DAG uniformly from all paths possible
 
@@ -123,13 +120,15 @@ class PhraseGenerator(object):
         if chosen_path is None:
             # *WARNING* not cryptographically secure
             chosen_path = random.randint(0, total_paths)
-        print '%.2f bits of entropy' % math.log(total_paths, 2),  "chose %d/%d" % (chosen_path, total_paths)
+        print '%.2f bits of entropy' % math.log(total_paths, 2),
+        print "chose %d/%d" % (chosen_path, total_paths)
 
         # 3) working backwards, pick the word that contributed our chosen_path
         words = []
         for level in xrange(length - 1, -1, -1):
             for n in xrange(self.n_words):
-                if (not words or words[-1] in self.adjacency_lists[n]) and path_counts[level][n] > chosen_path:
+                if (not words or words[-1] in self.adjacency_lists[n]) \
+                        and path_counts[level][n] > chosen_path:
                     words.append(n)
                     break
                 else:
@@ -142,18 +141,17 @@ class PhraseGenerator(object):
 #pg = PhraseGenerator(graph, 16)
 #pg.generate(5)
 
-
 if __name__ == '__main__':
     graph = WordGraph('wordlist_bigrams.txt')
     # wordgraph_dump(1, 3000)
     count = 32
     length = 5
-    print 'Generating %d passwords with %d bits of entropy' % (count, length * 10)
+    print 'Generating %d passwords with %d bits of entropy' % (
+        count, length * 10)
     pass_len = length * 3
     print 'Password'.ljust(pass_len), '  ', 'Mnemonic'
     print '-' * pass_len, '  ', '-' * (4 * length)
     for _ in xrange(count):
-        print '%s    %s' % graph.gen_passphrase(length)
-
-    assert graph.gen_passphrase(5, password="untneragedronic")[1] \
-                    == "until nerve agent dropped nice"
+        password = graph.gen_password(length)
+        phrase = graph.gen_passphrase(password)
+        print '%s    %s' % (password, phrase)
