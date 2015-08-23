@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+import argparse
 import math
 import random
 import struct
+import sys
 
 import digest
 
@@ -41,13 +43,23 @@ class WordGraph(object):
             out.append(prefix_list[gen_cryptorand_int() & 1023])
         return ''.join(out)
 
-    def gen_passphrase(self, password=None, skipwords=None):
+    def split_password(self, password):
         assert len(password) % 3 == 0
-        password_chunks = [password[x:x + 3].lower()
-                           for x in xrange(0, len(password), 3)]
+        return [password[x:x + 3].lower() for x in xrange(0, len(password), 3)]
 
+    def numbered_to_phrase(self, word_numbers):
+        return ' '.join(self.wordlist[n] for n in word_numbers)
+
+    def gen_passphrase_numbered(self, prefixes, skip_sets=None):
         # find possible words for each of the chosen prefixes
-        word_sets = [set(self.prefixes[p]) for p in password_chunks]
+        word_sets = [set(self.prefixes[p]) for p in prefixes]
+
+        if skip_sets is not None:
+            assert len(skip_sets) == len(word_sets)
+            for words, skips in zip(word_sets, skip_sets):
+                if len(skips) < len(words):
+                    words.difference_update(skips)
+                assert words, "no words left!"
 
         # working backwards, reduce possible words for each prefix
         # to only those words that have an outgoing edge to a word
@@ -69,17 +81,36 @@ class WordGraph(object):
 
         # working forwards, pick a word for each prefix
         last_word = 0
-        out_words = []
+        out_word_numbers = []
         for words in word_sets:
             words = (words & self.get_followers(last_word)) or words
             # heuristic: try to chain with the most common word
             # (smallest node number)
             word = min(words)
-            out_words.append(self.wordlist[word])
+            out_word_numbers.append(word)
             last_word = word
 
-        # print mismatch
-        return ' '.join(out_words)
+        return out_word_numbers
+
+    def gen_passphrase(self, password):
+        prefixes = self.split_password(password)
+
+        word_numbers = self.gen_passphrase_numbered(prefixes)
+
+        return self.numbered_to_phrase(word_numbers)
+
+    def gen_passphrases(self, password, count=16):
+        prefixes = self.split_password(password)
+        skip_sets = [set() for _ in prefixes]
+        phrases = []
+
+        for _ in xrange(count):
+            phrase_numbers = self.gen_passphrase_numbered(prefixes, skip_sets)
+            for word, skips in zip(phrase_numbers, skip_sets):
+                skips.add(word)
+            phrases.append(self.numbered_to_phrase(phrase_numbers))
+
+        return phrases
 
 
 def wordgraph_dump(a, b):
@@ -87,6 +118,12 @@ def wordgraph_dump(a, b):
         print '#%d: %s: %.30s %s' % (n, graph.wordlist[n], graph.followers[n],
                                      digest.decode(graph.followers[n]))
 
+def table(strings):
+    split_strings = [s.split() for s in strings]
+    position_lengths = [[len(w) for w in s] for s in split_strings]
+    widths = [max(lens) for lens in zip(*position_lengths)]
+    return [' '.join(word.ljust(width) for word, width in zip(words, widths))
+            for words in split_strings]
 
 class PhraseGenerator(object):
     def __init__(self, graph, n_words):
@@ -141,11 +178,18 @@ class PhraseGenerator(object):
 #pg = PhraseGenerator(graph, 16)
 #pg.generate(5)
 
-if __name__ == '__main__':
+def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--multiple', action='store_true',
+                        help='generate multiple mnemonics for each password')
+    parser.add_argument('length', default=5, type=int, nargs='?')
+    parser.add_argument('count', default=32, type=int, nargs='?')
+    options = parser.parse_args(args)
+
     graph = WordGraph('wordlist_bigrams.txt')
     # wordgraph_dump(1, 3000)
-    count = 32
-    length = 5
+    count = options.count
+    length = options.length
     print 'Generating %d passwords with %d bits of entropy' % (
         count, length * 10)
     pass_len = length * 3
@@ -153,5 +197,13 @@ if __name__ == '__main__':
     print '-' * pass_len, '  ', '-' * (4 * length)
     for _ in xrange(count):
         password = graph.gen_password(length)
-        phrase = graph.gen_passphrase(password)
-        print '%s    %s' % (password, phrase)
+        if options.multiple:
+            phrases = graph.gen_passphrases(password)
+            print '%s   ' % (password)
+            print '\t' + '\n\t'.join(table(phrases))
+        else:
+            phrase = graph.gen_passphrase(password)
+            print '%s   %s' % (password, phrase)
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
