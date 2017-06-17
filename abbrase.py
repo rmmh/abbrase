@@ -33,14 +33,19 @@ class WordGraph(object):
     def get_followers(self, node_number):
         return set(digest.decode(self.followers[node_number]))
 
-    def gen_password(self, length):
+    def gen_password(self, length, seed=0):
         # pick the series of prefixes (3-letter abbreviations)
         # that will make up the password
         prefix_list = list(self.prefixes)
         assert len(prefix_list) == 1024
         out = []
-        for _ in xrange(length):
-            out.append(prefix_list[gen_cryptorand_int() & 1023])
+        if seed:
+            while seed:
+                out.append(prefix_list[seed & 1023])
+                seed >>= 10
+        else:
+            for _ in xrange(length):
+                out.append(prefix_list[gen_cryptorand_int() & 1023])
         return ''.join(out)
 
     def split_password(self, password):
@@ -184,19 +189,27 @@ def main(args):
                         help='generate multiple mnemonics for each password')
     parser.add_argument('length', default=5, type=int, nargs='?')
     parser.add_argument('count', default=32, type=int, nargs='?')
+    parser.add_argument('-s', '--seed', default=0, type=int, help='convert number into passphrase')
     options = parser.parse_args(args)
+
+    if options.seed:
+        options.count = 1
 
     graph = WordGraph('wordlist_bigrams.txt')
     # wordgraph_dump(1, 3000)
     count = options.count
     length = options.length
-    print 'Generating %d passwords with %d bits of entropy' % (
-        count, length * 10)
+    if not options.seed:
+        print 'Generating %d passwords with %d bits of entropy' % (
+            count, length * 10)
     pass_len = length * 3
     print 'Password'.ljust(pass_len), '  ', 'Mnemonic'
     print '-' * pass_len, '  ', '-' * (4 * length)
     for _ in xrange(count):
-        password = graph.gen_password(length)
+        if options.seed:
+            password = graph.gen_password(0, seed=options.seed)
+        else:
+            password = graph.gen_password(length)
         if options.multiple:
             phrases = graph.gen_passphrases(password)
             print '%s   ' % (password)
