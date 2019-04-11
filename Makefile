@@ -8,9 +8,12 @@ CORPUS_EXEMPLAR=googlebooks-eng-1M-2gram-20090715-99.csv.zip
 
 data/${CORPUS_EXEMPLAR}:
 	mkdir -p data
-	cd data; curl -O -C - \
-				'http://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-[0-9].csv.zip' \
-				'http://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-2gram-20090715-[0-99].csv.zip'
+	cd data
+	gsutil && gsutil -m cp -n gs://books/ngrams/books/googlebooks-eng-1M-1gram-20090715-* . \
+		&& gsutil -m cp -n gs://books/ngrams/books/googlebooks-eng-1M-2gram-20090715-* .
+	gsutil || (curl -O -C - 'http://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-1gram-20090715-[0-9].csv.zip' \
+		&& curl -O -C - 'http://storage.googleapis.com/books/ngrams/books/googlebooks-eng-1M-2gram-20090715-[0-99].csv.zip')
+
 
 # the ngrams data is 'mostly sorted' -- lines tend to be in order, but it occasionally restarts
 # do a groupby (join records from different years into one) to reduce the data volume, then final sort+groupby
