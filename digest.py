@@ -1,8 +1,25 @@
+import argparse
 import gzip
 
 
-def build_common(digest):
+def edit_dist(s1, s2, lim=0):
+    last = range(len(s1) + 1)
+    this = [0] * len(last)
+    for j in range(0, len(s2)):
+        this[0] = j + 1
+        for i in range(1, len(this)):
+            this[i] = min(last[i] + 1,
+                             this[i - 1] + 1,
+                             last[i - 1] + int(s2[j] != s1[i-1]))
+        if lim and min(this) >= lim:
+            return min(this)
+        last, this = this, last
+    return last[-1]
+
+
+def build_common(digest, min_dist):
     common = {}
+    prefixes_missing = set(prefixes)
     n = 1
     out = ''
     for line in open('data/1gram_common.csv'):
@@ -10,16 +27,25 @@ def build_common(digest):
         word = word_orig.lower()
         if word in common:
             continue
-        if word[:3] in prefixes:
+        prefix = word[:3]
+        if prefix in prefixes:
+            if min_dist and any(edit_dist(word, k, min_dist) < min_dist for k in common):
+                continue
+            if prefix in prefixes_missing:
+                prefixes_missing.remove(prefix)
             common[word] = n
             out += word_orig + '\n'
             n += 1
+            if n & 0xff == 0:
+                print word, n
+    if prefixes_missing:
+        print ('unable to find %d prefixes in input!: %s'
+               % (len(prefixes_missing), ' '.join(sorted(prefixes_missing))))
     digest.write('%s\n' % n)
     digest.write(out)
     print 'words:', n
 
     return common
-
 
 def build_edges(common):
     edges = [[] for _ in xrange(len(common) + 1)]
@@ -120,13 +146,20 @@ for l in ([1, 2, 3, 5], [1], [1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 3000000], range(1
     assert decode(encode(l)) == l
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--prefixes', default='data/prefixes.txt')
+    parser.add_argument('--output', default='wordlist_bigrams.txt')
+    parser.add_argument('--min_dist', default=0, type=int)
+
+    options = parser.parse_args()
+
     prefixes = set()
-    for line in open("data/prefixes.txt"):
+    for line in open(options.prefixes):
         prefixes.add(line.split()[0])
 
-    digest = open('wordlist_bigrams.txt', 'w')
+    digest = open(options.output, 'w')
 
-    common = build_common(digest)
+    common = build_common(digest, options.min_dist)
     edges = build_edges(common)
 
     for n, out in enumerate(edges):
