@@ -126,91 +126,128 @@ def table(strings):
             for words in split_strings]
 
 class PhraseGenerator(object):
-    def __init__(self, graph, n_words):
+    def __init__(self, graph, n_words=None):
         self.graph = graph
-        self.n_words = n_words
-        self.adjacency_lists = []
+        self.n_words = n_words = n_words or len(graph.wordlist) - 1
+        assert self.graph.wordlist[0] == ''
+        self.idx_to_graph = sorted(range(1, n_words + 1), key=self.graph.wordlist.__getitem__)
+
+        graph_to_idx = [self.idx_to_graph.index(n) for n in range(1, n_words+1)]
+        graph_to_idx = [None] + sorted(range(n_words), key=self.idx_to_graph.__getitem__)
+        assert 0 not in self.idx_to_graph
+        assert 0 in graph_to_idx
         for n in range(n_words):
-            self.adjacency_lists.append(
-                [x for x in digest.decode(self.graph.followers[n])
-                 if x < n_words])
+            assert n == graph_to_idx[self.idx_to_graph[n]], n
+        # print(self.idx_to_graph, [self.graph.wordlist[x] for x in self.idx_to_graph])
+        self.adjacency_lists = [0] * n_words
+        for n in range(1, n_words + 1):
+            self.adjacency_lists[graph_to_idx[n]] = sorted(
+                [graph_to_idx[x] for x in digest.decode(self.graph.followers[n])
+                 if x <= n_words])
+        self.path_counts = []
+        self.total_paths = 0
+
+    def _prepare_path_counts(self, length):
+        if len(self.path_counts) != length:
+            path_counts = [[0] * self.n_words for _ in range(length)]
+
+            for n in range(self.n_words):
+                path_counts[length - 1][n] = 1
+
+            for level in range(length - 2, -1, -1):
+                for n in range(self.n_words):
+                    count = 0
+                    for out in self.adjacency_lists[n]:
+                        count += path_counts[level + 1][out]
+                    path_counts[level][n] = count
+            self.path_counts = path_counts
+            self.total_paths = sum(path_counts[0])
+
+        return self.path_counts
+
+    def n_bits(self, length):
+        self._prepare_path_counts(length)
+        return math.log2(self.total_paths)
 
     def generate(self, length, chosen_path=None):
         ''' generate a random phrase '''
         # pick a phrase at random
         # or, pick a path through a DAG uniformly from all paths possible
 
-        # 1) calculate how many paths can reach each word
-        path_counts = [[0] * self.n_words for _ in range(length)]
+        path_counts = self._prepare_path_counts(length)
 
-        for n in range(self.n_words):
-            path_counts[0][n] = 1
-
-        for level in range(length - 1):
-            for n in range(self.n_words):
-                count = path_counts[level][n]
-                for out in self.adjacency_lists[n]:
-                    path_counts[level + 1][out] += count
-
-        # 2) pick a path to backtrack along
-        total_paths = sum(path_counts[-1])
+        # 2) pick a path to follow
         if chosen_path is None:
-            chosen_path = secrets.randbelow(total_paths)
-        print('%.2f bits of entropy' % math.log(total_paths, 2), end=' ')
-        print("chose %d/%d" % (chosen_path, total_paths))
+            chosen_path = secrets.randbelow(self.total_paths)
+            #print('%.2f bits of entropy' % math.log(self.total_paths, 2), end=' ')
+            #print("chose %d/%d" % (chosen_path, self.total_paths))
+        if not 0 <= chosen_path < self.total_paths:
+            raise ValueError('chosen path %d not in [0,%d)' % (chosen_path, self.total_paths))
 
-        # 3) working backwards, pick the word that contributed our chosen_path
+        # 3) working forwards, pick the word that contributed our chosen_path
+        path = chosen_path
         words = []
-        for level in range(length - 1, -1, -1):
-            for n in range(self.n_words):
-                if (not words or words[-1] in self.adjacency_lists[n]) \
-                        and path_counts[level][n] > chosen_path:
+        for level in range(length):
+            for n in range(self.n_words) if level == 0 else self.adjacency_lists[words[-1]]:
+                #print(words, n, path_counts[level][n], path, self.adjacency_lists[n])
+                if path_counts[level][n] <= path:
+                    path -= path_counts[level][n]
+                else:
                     words.append(n)
                     break
-                else:
-                    chosen_path -= path_counts[level][n]
             else:
-                print("couldn't find a predecessor :(", words, level)
-        phrase = ' '.join(self.graph.wordlist[word] for word in words[::-1])
-        print(phrase)
-
-#pg = PhraseGenerator(graph, 16)
-#pg.generate(5)
+                print("couldn't find a successor :(", words, level)
+        assert len(words) == length, chosen_path
+        return ' '.join(self.graph.wordlist[self.idx_to_graph[word]] for word in words)
 
 def main(args):
     parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--phrase', action='store_true',
+                        help='Generate passphrases instead of abbrases.')
     parser.add_argument('-m', '--multiple', action='store_true',
                         help='generate multiple mnemonics for each password')
     parser.add_argument('length', default=5, type=int, nargs='?')
     parser.add_argument('count', default=32, type=int, nargs='?')
-    parser.add_argument('-s', '--seed', default=0, type=int, help='convert number into passphrase')
+    parser.add_argument('-s', '--seed', type=int, help='convert number into passphrase')
     options = parser.parse_args(args)
 
     if options.seed:
         options.count = 1
 
     graph = WordGraph('wordlist_bigrams.txt')
+
     # wordgraph_dump(1, 3000)
     count = options.count
     length = options.length
+    n_bits = length * 10
+    if options.phrase:
+        pg = PhraseGenerator(graph)
+        n_bits = '%.2f' % pg.n_bits(length)
     if not options.seed:
-        print('Generating %d passwords with %d bits of entropy' % (
-            count, length * 10))
-    pass_len = length * 3
-    print('Password'.ljust(pass_len), '  ', 'Mnemonic')
-    print('-' * pass_len, '  ', '-' * (4 * length))
+        print('Generating %d passwords with %s bits of entropy' % (
+            count, n_bits))
+    if options.phrase:
+        print('Passphrase')
+        print('-' * length * (1 + sum(len(w) for w in graph.wordlist) // len(graph.wordlist)))
+    else:
+        pass_len = length * 3
+        print('Password'.ljust(pass_len), '  ', 'Mnemonic')
+        print('-' * pass_len, '  ', '-' * (4 * length))
     for _ in range(count):
-        if options.seed:
-            password = graph.gen_password(0, seed=options.seed)
+        if options.phrase:
+            print(pg.generate(length, chosen_path=options.seed))
         else:
-            password = graph.gen_password(length)
-        if options.multiple:
-            phrases = graph.gen_passphrases(password)
-            print('%s   ' % (password))
-            print('\t' + '\n\t'.join(table(phrases)))
-        else:
-            phrase = graph.gen_passphrase(password)
-            print('%s   %s' % (password, phrase))
+            if options.seed:
+                password = graph.gen_password(0, seed=options.seed)
+            else:
+                password = graph.gen_password(length)
+            if options.multiple:
+                phrases = graph.gen_passphrases(password)
+                print('%s   ' % (password))
+                print('\t' + '\n\t'.join(table(phrases)))
+            else:
+                phrase = graph.gen_passphrase(password)
+                print('%s   %s' % (password, phrase))
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
