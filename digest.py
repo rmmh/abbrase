@@ -3,7 +3,7 @@ import gzip
 
 
 def edit_dist(s1, s2, lim=0):
-    last = range(len(s1) + 1)
+    last = list(range(len(s1) + 1))
     this = [0] * len(last)
     for j in range(0, len(s2)):
         this[0] = j + 1
@@ -37,18 +37,18 @@ def build_common(digest, min_dist):
             out += word_orig + '\n'
             n += 1
             if n & 0xff == 0:
-                print word, n
+                print(word, n)
     if prefixes_missing:
-        print ('unable to find %d prefixes in input!: %s'
-               % (len(prefixes_missing), ' '.join(sorted(prefixes_missing))))
+        print(('unable to find %d prefixes in input!: %s'
+               % (len(prefixes_missing), ' '.join(sorted(prefixes_missing)))))
     digest.write('%s\n' % n)
     digest.write(out)
-    print 'words:', n
+    print('words:', n)
 
     return common
 
 def build_edges(common):
-    edges = [[] for _ in xrange(len(common) + 1)]
+    edges = [[] for _ in range(len(common) + 1)]
     last_a = ''
     prefix_transitions = set()
     for line in gzip.GzipFile('data/2gram.csv.gz'):
@@ -63,13 +63,13 @@ def build_edges(common):
             if a != last_a:
                 if last_a:
                     if a[0] != last_a[0]:
-                        print '!', last_a
+                        print('!', last_a)
                 last_a = a
             edges[common[a]].append(common[b])
 
-    print 'Attested prefix-prefix combinations:',
-    print '%.2f%%' % (100.0 * len(prefix_transitions) /
-                     (1.0 * len(prefixes) * len(prefixes)))
+    print('Attested prefix-prefix combinations:', end=' ')
+    print('%.2f%%' % (100.0 * len(prefix_transitions) /
+                     (1.0 * len(prefixes) * len(prefixes))))
 
     return edges
 
@@ -142,7 +142,7 @@ def decode(enc):
         dec.append(num)
     return dec
 
-for l in ([1, 2, 3, 5], [1], [1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 3000000], range(1, 500)):
+for l in ([1, 2, 3, 5], [1], [1, 2, 3, 5, 6, 8, 9, 10, 11, 12, 3000000], list(range(1, 500))):
     assert decode(encode(l)) == l
 
 if __name__ == '__main__':

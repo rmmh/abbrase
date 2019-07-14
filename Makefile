@@ -34,7 +34,7 @@ wordlist_bigrams.txt:
 	# relies on data/prefixes.txt data/2gram.csv.gz,
 	# but I don't know how to tell Make to only generate those if
 	# this target is missing
-	pypy digest.py
+	pypy3 digest.py
 
 clean:
 	rm -f abbrase

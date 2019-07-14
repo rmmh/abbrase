@@ -1,34 +1,29 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import math
-import random
-import struct
+import secrets
 import sys
 
 import digest
 
 
-def gen_cryptorand_int():
-    return struct.unpack('>I', open('/dev/urandom', 'rb').read(4))[0]
-
-
 class WordGraph(object):
 
     def __init__(self, fname):
-        compressed_graph = open(fname)
-        n_words = int(compressed_graph.readline())
-        self.wordlist = ['']  # ['', 'and', 'the', ...]
-        self.prefixes = {}  # {'and': [1, ...], ...}
-        for n in xrange(1, n_words, 1):
-            word = compressed_graph.readline().strip()
-            self.wordlist.append(word)
-            self.prefixes.setdefault(word[:3].lower(), []).append(n)
+        with open(fname) as compressed_graph:
+            n_words = int(compressed_graph.readline())
+            self.wordlist = ['']  # ['', 'and', 'the', ...]
+            self.prefixes = {}  # {'and': [1, ...], ...}
+            for n in range(1, n_words):
+                word = compressed_graph.readline().strip()
+                self.wordlist.append(word)
+                self.prefixes.setdefault(word[:3].lower(), []).append(n)
 
-        self.followers = []
+            self.followers = []
 
-        for a in xrange(n_words):
-            self.followers.append(compressed_graph.readline().rstrip('\n'))
+            for a in range(n_words):
+                self.followers.append(compressed_graph.readline().rstrip('\n'))
 
     def get_followers(self, node_number):
         return set(digest.decode(self.followers[node_number]))
@@ -44,13 +39,13 @@ class WordGraph(object):
                 out.append(prefix_list[seed & 1023])
                 seed >>= 10
         else:
-            for _ in xrange(length):
-                out.append(prefix_list[gen_cryptorand_int() & 1023])
+            for _ in range(length):
+                out.append(prefix_list[secrets.randbelow(1024)])
         return ''.join(out)
 
     def split_password(self, password):
         assert len(password) % 3 == 0
-        return [password[x:x + 3].lower() for x in xrange(0, len(password), 3)]
+        return [password[x:x + 3].lower() for x in range(0, len(password), 3)]
 
     def numbered_to_phrase(self, word_numbers):
         return ' '.join(self.wordlist[n] for n in word_numbers)
@@ -109,7 +104,7 @@ class WordGraph(object):
         skip_sets = [set() for _ in prefixes]
         phrases = []
 
-        for _ in xrange(count):
+        for _ in range(count):
             phrase_numbers = self.gen_passphrase_numbered(prefixes, skip_sets)
             for word, skips in zip(phrase_numbers, skip_sets):
                 skips.add(word)
@@ -119,9 +114,9 @@ class WordGraph(object):
 
 
 def wordgraph_dump(a, b):
-    for n in xrange(a, b):
-        print '#%d: %s: %.30s %s' % (n, graph.wordlist[n], graph.followers[n],
-                                     digest.decode(graph.followers[n]))
+    for n in range(a, b):
+        print('#%d: %s: %.30s %s' % (n, graph.wordlist[n], graph.followers[n],
+                                     digest.decode(graph.followers[n])))
 
 def table(strings):
     split_strings = [s.split() for s in strings]
@@ -135,24 +130,24 @@ class PhraseGenerator(object):
         self.graph = graph
         self.n_words = n_words
         self.adjacency_lists = []
-        for n in xrange(n_words):
+        for n in range(n_words):
             self.adjacency_lists.append(
                 [x for x in digest.decode(self.graph.followers[n])
                  if x < n_words])
 
     def generate(self, length, chosen_path=None):
-        ''' generate a random phrase. this is not cryptographically secure '''
+        ''' generate a random phrase '''
         # pick a phrase at random
         # or, pick a path through a DAG uniformly from all paths possible
 
         # 1) calculate how many paths can reach each word
-        path_counts = [[0] * self.n_words for _ in xrange(length)]
+        path_counts = [[0] * self.n_words for _ in range(length)]
 
-        for n in xrange(self.n_words):
+        for n in range(self.n_words):
             path_counts[0][n] = 1
 
-        for level in xrange(length - 1):
-            for n in xrange(self.n_words):
+        for level in range(length - 1):
+            for n in range(self.n_words):
                 count = path_counts[level][n]
                 for out in self.adjacency_lists[n]:
                     path_counts[level + 1][out] += count
@@ -160,15 +155,14 @@ class PhraseGenerator(object):
         # 2) pick a path to backtrack along
         total_paths = sum(path_counts[-1])
         if chosen_path is None:
-            # *WARNING* not cryptographically secure
-            chosen_path = random.randint(0, total_paths)
-        print '%.2f bits of entropy' % math.log(total_paths, 2),
-        print "chose %d/%d" % (chosen_path, total_paths)
+            chosen_path = secrets.randbelow(total_paths)
+        print('%.2f bits of entropy' % math.log(total_paths, 2), end=' ')
+        print("chose %d/%d" % (chosen_path, total_paths))
 
         # 3) working backwards, pick the word that contributed our chosen_path
         words = []
-        for level in xrange(length - 1, -1, -1):
-            for n in xrange(self.n_words):
+        for level in range(length - 1, -1, -1):
+            for n in range(self.n_words):
                 if (not words or words[-1] in self.adjacency_lists[n]) \
                         and path_counts[level][n] > chosen_path:
                     words.append(n)
@@ -176,9 +170,9 @@ class PhraseGenerator(object):
                 else:
                     chosen_path -= path_counts[level][n]
             else:
-                print "couldn't find a predecessor :(", words, level
+                print("couldn't find a predecessor :(", words, level)
         phrase = ' '.join(self.graph.wordlist[word] for word in words[::-1])
-        print phrase
+        print(phrase)
 
 #pg = PhraseGenerator(graph, 16)
 #pg.generate(5)
@@ -200,23 +194,23 @@ def main(args):
     count = options.count
     length = options.length
     if not options.seed:
-        print 'Generating %d passwords with %d bits of entropy' % (
-            count, length * 10)
+        print('Generating %d passwords with %d bits of entropy' % (
+            count, length * 10))
     pass_len = length * 3
-    print 'Password'.ljust(pass_len), '  ', 'Mnemonic'
-    print '-' * pass_len, '  ', '-' * (4 * length)
-    for _ in xrange(count):
+    print('Password'.ljust(pass_len), '  ', 'Mnemonic')
+    print('-' * pass_len, '  ', '-' * (4 * length))
+    for _ in range(count):
         if options.seed:
             password = graph.gen_password(0, seed=options.seed)
         else:
             password = graph.gen_password(length)
         if options.multiple:
             phrases = graph.gen_passphrases(password)
-            print '%s   ' % (password)
-            print '\t' + '\n\t'.join(table(phrases))
+            print('%s   ' % (password))
+            print('\t' + '\n\t'.join(table(phrases)))
         else:
             phrase = graph.gen_passphrase(password)
-            print '%s   %s' % (password, phrase)
+            print('%s   %s' % (password, phrase))
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import unittest
 
@@ -22,6 +22,7 @@ class AbbraseTest(unittest.TestCase):
         passwords = set()
         while len(passwords) < 1024:
             passwords.add(self.graph.gen_password(1))
+
 
 if __name__ == '__main__':
     unittest.main()
