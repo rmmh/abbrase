@@ -22,7 +22,7 @@ def build_common(digest, min_dist):
     prefixes_missing = set(prefixes)
     n = 1
     out = ''
-    for line in open('data/1gram_common.csv'):
+    for line in open('data/1gram_common.csv', encoding='utf-8', errors='replace'):
         word_orig = line.split()[0]
         word = word_orig.lower()
         if word in common:
@@ -52,7 +52,7 @@ def build_edges(common):
     last_a = ''
     prefix_transitions = set()
     for line in gzip.GzipFile('data/2gram.csv.gz'):
-        parts = line.lower().split()
+        parts = line.decode('utf8').lower().split()
         if len(parts) == 3:
             a, b, count = parts
             if a not in common or b not in common:
