@@ -86,21 +86,18 @@ class WordGenerator(object):
                 if self.allowed[n] & 1:
                     path_counts[length - 1][n] = 1
                     suff.append('%s%s' % (chr(96 + (n // 27)), chr(96 + (n % 27))))
-            # print(len(suff), 27 * 27, ' '.join(suff))
 
             for level in range(length - 2, 0, -1):
                 for n in range(27, 27 ** 2):
                     count = 0
                     for x in range(1, 27):
                         if self.allowed[n] & (1 << x):
-                            # print((n % 27) * 27 + x)
                             count += path_counts[level + 1][(n % 27) * 27 + x]
                     path_counts[level][n] = count
             for n in range(27):
                 count = 0
                 for x in range(1, 27):
                     if self.allowed[n] & (1 << x):
-                        # print((n % 27) * 27 + x)
                         count += path_counts[1][(n % 27) * 27 + x]
                 path_counts[0][n] = count
             self.path_counts = path_counts
@@ -129,24 +126,24 @@ class WordGenerator(object):
 
         # 3) working forwards, pick the character that contributed our chosen_path
         path = chosen_path
-        words = []
+        grams = []
         for level in range(length):
             if level == 0:
                 adj = range(len(path_counts[0]))  # first level: (space, char, char)
             else:
-                base = words[-1] % 27 * 27
-                adj = (base + x for x in range(27) if self.allowed[words[-1]] & (1 << x))
+                base = grams[-1] % 27 * 27
+                adj = (base + x for x in range(27) if self.allowed[grams[-1]] & (1 << x))
             for n in adj:
-                #print(words, n, path_counts[level][n], path, self.adjacency_lists[n])
+                #print(grams, n, path_counts[level][n], path, self.adjacency_lists[n])
                 if path_counts[level][n] <= path:
                     path -= path_counts[level][n]
                 else:
-                    words.append(n)
+                    grams.append(n)
                     break
             else:
-                print("couldn't find a successor :(", words, level)
-        assert len(words) == length, chosen_path
-        return ''.join(chr(c % 27 + 96) for c in words)
+                print("couldn't find a successor :(", grams, level)
+        assert len(grams) == length, chosen_path
+        return ''.join(chr(c % 27 + 96) for c in grams)
 
 
 if __name__ == '__main__':
@@ -155,7 +152,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--all', action='store_true', help='emit all possibilities')
     parser.add_argument('-l', '--line', action='store_true', help='one output per line')
     parser.add_argument('length', default=9, type=int, nargs='?')
-    parser.add_argument('count', default=32, type=int, nargs='?')
+    parser.add_argument('count', default=64, type=int, nargs='?')
     options = parser.parse_args()
 
     if options.digest:

@@ -1,4 +1,4 @@
-all: abbrase wordlist_bigrams.txt
+all: abbrase wordlist_bigrams.txt wordgen
 
 PREFIX?=/usr/local
 datadir?=${PREFIX}/share/abbrase
@@ -37,9 +37,10 @@ wordlist_bigrams.txt:
 	pypy3 digest.py
 
 clean:
-	rm -f abbrase
+	rm -f abbrase wordgen
 
 install: all
-	install -d $(DESTDIR)/$(PREFIX)/bin $(DESTDIR)/$(datadir)/
-	install abbrase $(DESTDIR)/$(PREFIX)/bin
-	install wordlist_bigrams.txt $(DESTDIR)/$(datadir)/
+	install -d $(PREFIX)/bin $(datadir)/
+	install abbrase $(PREFIX)/bin
+	install wordgen $(PREFIX)/bin
+	install wordlist_bigrams.txt $(datadir)/
