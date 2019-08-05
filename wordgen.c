@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
   big paths[length][27 * 27];
 
   big total = prepare_path_counts(paths, length);
-  int bits;
+  int bits = 0;
   for (int i = BIG_WORDS - 1; i >= 0; i--) {
     if (total.val[i]) {
       bits = 32 * i + (31 - __builtin_clz(total.val[i]));
