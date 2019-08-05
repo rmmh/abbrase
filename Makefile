@@ -1,7 +1,7 @@
 all: abbrase wordlist_bigrams.txt wordgen
 
 PREFIX?=/usr/local
-datadir?=${PREFIX}/share/abbrase
+datadir?=${DESTDIR}${PREFIX}/share/abbrase
 CFLAGS=-Wall -Wextra -Os -DDATADIR=${datadir}
 
 CORPUS_EXEMPLAR=googlebooks-eng-1M-2gram-20090715-99.csv.zip
@@ -40,7 +40,7 @@ clean:
 	rm -f abbrase wordgen
 
 install: all
-	install -d $(PREFIX)/bin $(datadir)/
-	install abbrase $(PREFIX)/bin
-	install wordgen $(PREFIX)/bin
+	install -d $(DESTDIR)$(PREFIX)/bin $(datadir)/
+	install abbrase $(DESTDIR)$(PREFIX)/bin
+	install wordgen $(DESTDIR)$(PREFIX)/bin
 	install wordlist_bigrams.txt $(datadir)/
