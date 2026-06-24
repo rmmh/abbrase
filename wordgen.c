@@ -157,7 +157,7 @@ bool big_lte(big *a, big *b) {
 
 void big_irand(big *dst, big *below) {
   while (1) {
-    if (getrandom(dst, sizeof *dst, 0) < 0) err(6, "unable to get randomness");
+    if (getentropy(dst, sizeof *dst) < 0) err(6, "unable to get randomness");
     for (int i = BIG_WORDS - 1; i >= 0; i--) {
       if (below->val[i] == 0) {
         dst->val[i] = 0;
