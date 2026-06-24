@@ -3,12 +3,13 @@
 <head>
 	<title>Abbrase.js</title>
 	<script src="abbrase.js"></script>
+	<script src="wordgen.js"></script>
 	<style type="text/css">
 	body { background-color: #222; color: #ccc; font-family: sans-serif; }
 	pre { border: 1px solid #888; padding: 10px; overflow-x: auto; }
-	a { color: #44f; }
+	a { color: #88f; }
 	#content { width: 800px; margin: auto;}
-	#wordcount { width: 3em; }
+	.wordcount { width: 3em; }
 	</style>
 </head>
 <body>
@@ -17,11 +18,12 @@
 <div id="content">
 
 <h1>Abbrase</h1>
-Password generation using abbreviated phrases<br><br>
+Password generation using abbreviated phrases<br>
+<a href="#wordgen">Want random words instead?</a><br><br>
 
 
 <input type="button" onclick="newbatch();" value="Generate"> passwords using
-<input id="wordcount" type="number" min="1" max="100" value="5" onchange="newbatch();"> word phrases.
+<input id="wordcount" class="wordcount" type="number" min="1" max="100" value="5" onchange="newbatch();"> word phrases.
 
 <pre id="output"></pre>
 
@@ -36,6 +38,16 @@ Finally, a phrase is found that abbreviates to the password. Words that are norm
 The mnemonic is much easier to remember than the input numbers, but equally secure!<br>
 <br>
 All steps are performed locally in your browser, and not sent to any other server. For more security, try the Python or C versions in the Abbrase <a href="https://github.com/rmmh/abbrase">github repository</a>.
+
+<h2 id="wordgen">Random Word Generator</h2>
+Generate random English-like words using trigram paths.<br><br>
+
+<input type="button" onclick="newwords();" value="Generate">
+<input id="wordcount2" class="wordcount" type="number" min="1" max="1000" value="64" onchange="newwords();">
+words of length
+<input id="wordlength" class="wordcount" type="number" min="3" max="20" value="8" onchange="newwords();">.
+
+<pre id="wordgen-output"></pre>
 
 </div>
 
@@ -69,6 +81,16 @@ function newbatch() {
 
 graph.onready = newbatch;
 graph.load();
+
+var wordgen = new WordGenerator();
+
+function newwords() {
+	var length = parseInt(document.getElementById("wordlength").value) || 8;
+	var count = parseInt(document.getElementById("wordcount2").value) || 64;
+	setTextContent("wordgen-output", wordgen.makeTable(length, count));
+}
+
+newwords();
 </script>
 </body>
 </html>
