@@ -114,7 +114,6 @@ function WordGenerator() {
 
 WordGenerator.prototype._preparePathCounts = function (length) {
 	if (this.cachedLength === length) return this.pathCounts;
-	this.cachedLength = length;
 
 	var pathCounts = [];
 	for (var i = 0; i < length; i++) {
@@ -127,6 +126,7 @@ WordGenerator.prototype._preparePathCounts = function (length) {
 		}
 	}
 
+	var totalPaths = 0n;
 	for (var level = length - 2; level >= 0; level--) {
 		var startN = level === 0 ? 0 : 27;
 		var endN = level === 0 ? 27 : 27 * 27;
@@ -140,11 +140,13 @@ WordGenerator.prototype._preparePathCounts = function (length) {
 			}
 			pathCounts[level][n] = count;
 			if (level === 0) {
-				this.totalPaths += count;
+				totalPaths += count;
 			}
 		}
 	}
 
+	this.cachedLength = length;
+	this.totalPaths = totalPaths;
 	this.pathCounts = pathCounts;
 	return pathCounts;
 }
